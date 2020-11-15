@@ -1,0 +1,105 @@
+
+===    *Лабораторная работа №4*
+
+
+
+---
+
+*_Задание_*: _Тактироваться от PLL на частоте 10 Мгц.
+По нажатию кнопки поменять состояние всех 4 светодиодов на противоположные
+Нажатие кнопки определяется по отпусканию кнопки.
+Тоесть нужно определить что кнопка прижата, и дождаться пока она будет отжата - это будет будет означать, что кнопка нажата._
+
+---
+Произведем расчёт частоты:
+
+*_8 МГц : 4 МГц = 2 МГц_*
+
+*_2 МГц : 50 МГц = 100 МГц_*
+
+*_100 МГц : 6 МГц = 16 МГц_*
+
+Из расчета следует, что приближенное к *10МГц* является значение  *16МГц.* (из-за ограничений по частоте)
+
+Перед работой со светодиодами необходимо настроить частоту.
+
+ * Включаем источник частоты *HSE*;
+
+ * выбираем *HSE* в качестве источника тактирования;
+
+ * настраиваем *PLL*;
+
+ * выключаем *HSI*;
+
+ * устанавливаем *HSE* источником;
+
+ * включаем *PLL*, ожидаем его готовности.
+
+Код программы:
+
+[source, cpp]
+----
+
+#include "rccregisters.hpp"
+#include "gpiocregisters.hpp"
+#include <iostream>
+#include "gpioaregisters.hpp"
+int main()
+{
+    RCC::CR::HSEON::On::Set();
+while(!RCC::CR::HSERDY::Ready::IsSet())
+{
+}
+    RCC::CFGR::SW::Hse::Set();
+while(!RCC::CFGR::SWS::Hse::IsSet())
+{
+}
+    RCC::PLLCFGR::PLLM0::Set(4U);
+    RCC::PLLCFGR::PLLN0::Set(50U);
+    RCC::PLLCFGR::PLLP0::Pllp6::Set();
+    RCC::PLLCFGR::PLLSRC::Set(1);
+    RCC::CR::HSION::Off::Set();
+    RCC::CR::PLLON::On::Set();
+
+while(RCC::CR::PLLRDY::Unlocked::IsSet())
+{
+}
+    RCC::CFGR::SW::Pll::Set();
+while(!RCC::CFGR::SWS::Pll::IsSet())
+{
+}
+    RCC::AHB1ENR::GPIOCEN::Enable::Set();
+    RCC::AHB1ENR::GPIOAEN::Enable::Set();
+    GPIOC::MODER::MODER13::Input::Set();
+    GPIOC::MODER::MODER5::Output::Set();
+    GPIOC::MODER::MODER8::Output::Set();
+    GPIOC::MODER::MODER9::Output::Set();
+    GPIOA::MODER::MODER5::Output::Set();
+for(;;)
+{
+    if(GPIOC::IDR::IDR13::Low::IsSet())
+    {
+        while(GPIOC::IDR::IDR13::Low::IsSet());
+        if(GPIOC::ODR::ODR5::Low::IsSet())
+        {
+            GPIOC::BSRR::BS5::High::Write();
+            GPIOC::BSRR::BS8::High::Write();
+            GPIOC::BSRR::BS9::High::Write();
+            GPIOA::BSRR::BS5::High::Write();
+
+        }
+        else
+        {
+            GPIOC::BSRR::BR5::Low::Write();
+            GPIOC::BSRR::BR8::Low::Write();
+            GPIOC::BSRR::BR9::Low::Write();
+            GPIOA::BSRR::BR5::Low::Write();
+        }
+    }
+}
+return 1 ;
+}
+----
+
+
+
